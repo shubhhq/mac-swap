@@ -3,6 +3,11 @@ import requests
 import json
 import socket
 import subprocess
+import warnings
+import time
+
+# Suppress urllib3 warning about OpenSSL
+warnings.filterwarnings('ignore', category=Warning)
 
 # Load config
 with open('config.json') as f:
@@ -26,17 +31,22 @@ class TrustedDeviceListener:
     def __init__(self):
         self.trusted_services = []
 
+    def remove_service(self, zeroconf, type, name):
+        pass
+
     def add_service(self, zeroconf, type, name):
         info = zeroconf.get_service_info(type, name)
         if info:
             hostname = name.split(".")[0]
-            if hostname in config["trusted_devices"]:
+            if hostname == "shubhams-Mac-mini":  # Match exact hostname from dns-sd output
                 ip = socket.inet_ntoa(info.addresses[0])
-                token = info.properties.get(b"token").decode()
-                self.trusted_services.append({"ip": ip, "token": token, "name": hostname})
-                print(f"Found trusted device: {hostname} at {ip}")
+                self.trusted_services.append({
+                    "ip": ip,
+                    "token": config["secret_token"],  # Use token from config
+                    "name": hostname
+                })
+                print(f"Found device: {hostname} at {ip}")
 
-    # Add update_service method to fix the FutureWarning
     def update_service(self, zeroconf, type, name):
         pass
 
@@ -49,22 +59,27 @@ def send_trigger(target_ip, token):
                 "X-Keyboard": keyboard_formatted,
                 "X-Mouse": pointer_formatted
             },
-            timeout=2
+            timeout=15,
+            verify=False
         )
         print(f"Trigger sent to {target_ip}: {response.text}")
     except Exception as e:
         print(f"Failed to send trigger: {e}")
 
-# Discover trusted devices
+# Discover devices
+print("Discovering devices...")
 zeroconf = Zeroconf()
 listener = TrustedDeviceListener()
 browser = ServiceBrowser(zeroconf, "_magicswitcher._tcp.local.", listener)
 
+# Wait a bit for discovery
+time.sleep(2)
+
 # Prompt user to select a device
 if not listener.trusted_services:
-    print("No trusted devices found.")
+    print("No devices found.")
 else:
-    print("\nTrusted Devices:")
+    print("\nAvailable Devices:")
     for i, service in enumerate(listener.trusted_services):
         print(f"{i + 1}. {service['name']} ({service['ip']})")
     
