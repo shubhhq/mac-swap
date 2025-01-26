@@ -14,18 +14,18 @@ except:
     local_ip = "127.0.0.1"
 
 service_type = "_magicswitcher._tcp.local."
-service_name = f"shubhams-Mac-mini.{service_type}"
+hostname = platform.node()
+service_name = f"{hostname}.{service_type}"
 service_port = 54123
 
-#print hostname using platform.node()
-print(f"Using hostname: {platform.node()}")
+print(f"Using hostname: {hostname}")
 # Use the LAN IP and set the server field
 info = ServiceInfo(
     type_=service_type,
     name=service_name,
     addresses=[socket.inet_aton(local_ip)],
     port=service_port,
-    server="shubhams-Mac-mini.local.",  # Must match HostName
+    server=f"{hostname}.local.",  # Must match HostName
 )
 
 zeroconf = Zeroconf(interfaces=[local_ip])
